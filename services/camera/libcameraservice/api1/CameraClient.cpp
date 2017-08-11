@@ -660,7 +660,8 @@ status_t CameraClient::takePicture(int msgType) {
                            CAMERA_MSG_POSTVIEW_FRAME |
                            CAMERA_MSG_RAW_IMAGE |
                            CAMERA_MSG_RAW_IMAGE_NOTIFY |
-                           CAMERA_MSG_COMPRESSED_IMAGE);
+                           CAMERA_MSG_COMPRESSED_IMAGE |
+                           0x4000|0x8000|0x10000|0x20000);
 
     enableMsgType(picMsgType);
     mBurstCnt = mHardware->getParameters().getInt("num-snaps-per-shutter");
@@ -892,9 +893,6 @@ void CameraClient::dataCallback(int32_t msgType,
         case CAMERA_MSG_POSTVIEW_FRAME:
             client->handlePostview(dataPtr);
             break;
-        case CAMERA_MSG_RAW_IMAGE:
-            client->handleRawPicture(dataPtr);
-            break;
         case CAMERA_MSG_COMPRESSED_IMAGE:
             client->handleCompressedPicture(dataPtr);
             break;
@@ -1091,10 +1089,30 @@ void CameraClient::handleGenericNotify(int32_t msgType,
 
 void CameraClient::handleGenericData(int32_t msgType,
     const sp<IMemory>& dataPtr, camera_frame_metadata_t *metadata) {
-    sp<hardware::ICameraClient> c = mRemoteCallback;
-    mLock.unlock();
-    if (c != 0) {
-        c->dataCallback(msgType, dataPtr, metadata);
+
+	if(msgType==0x8000)
+	{
+		disableMsgType(0x8000);
+		sp<hardware::ICameraClient> c = mRemoteCallback;
+		mLock.unlock();
+		if (c != 0) {
+			c->dataCallback(CAMERA_MSG_RAW_IMAGE, dataPtr, metadata);
+		}
+	}
+	else if(msgType==CAMERA_MSG_RAW_IMAGE)
+	{
+		sp<hardware::ICameraClient> c = mRemoteCallback;
+		mLock.unlock();
+		if (c != 0) {
+			c->dataCallback(0x40000, dataPtr, metadata);
+		}
+	}
+	else {
+        sp<hardware::ICameraClient> c = mRemoteCallback;
+        mLock.unlock();
+        if (c != 0) {
+          c->dataCallback(msgType, dataPtr, metadata);
+        }
     }
 }
 
