@@ -59,7 +59,6 @@ CameraClient::CameraClient(const sp<CameraService>& cameraService,
     mOrientation = getOrientation(0, mCameraFacing == CAMERA_FACING_FRONT);
     mLegacyMode = legacyMode;
     mPlayShutterSound = true;
-    mBurstCnt = 0;
     LOG1("CameraClient::CameraClient X (pid %d, id %d)", callingPid, cameraId);
 }
 
@@ -679,11 +678,6 @@ status_t CameraClient::takePicture(int msgType) {
 
     enableMsgType(picMsgType);
 
-    mBurstCnt = mHardware->getParameters().getInt("num-snaps-per-shutter");
-    if(mBurstCnt <= 0)
-        mBurstCnt = 1;
-    LOG1("mBurstCnt = %d", mBurstCnt);
-
     return mHardware->takePicture();
 }
 
@@ -1065,10 +1059,7 @@ void CameraClient::handleRawPicture(const sp<IMemory>& mem) {
 
 // picture callback - compressed picture ready
 void CameraClient::handleCompressedPicture(const sp<IMemory>& mem) {
-    if (mBurstCnt)
-        mBurstCnt--;
-    if (!mBurstCnt)
-        disableMsgType(CAMERA_MSG_COMPRESSED_IMAGE);
+    disableMsgType(CAMERA_MSG_COMPRESSED_IMAGE);
 
     sp<hardware::ICameraClient> c = mRemoteCallback;
     mLock.unlock();
